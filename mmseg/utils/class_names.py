@@ -1,4 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import matplotlib as mpl
+from math import ceil
+
 from mmengine.utils import is_str
 
 
@@ -10,6 +13,11 @@ def cityscapes_classes():
         'person', 'rider', 'car', 'truck', 'bus', 'train', 'motorcycle',
         'bicycle'
     ]
+
+
+def cityscapes_arbitrary_classes_classes(n_classes):
+    """Sequential class_index names"""
+    return [f"class_{i+1}" for i in range(n_classes)]
 
 
 def ade_classes():
@@ -254,6 +262,19 @@ def cityscapes_palette():
             [255, 0, 0], [0, 0, 142], [0, 0, 70], [0, 60, 100], [0, 80, 100],
             [0, 0, 230], [119, 11, 32]]
 
+def cityscapes_arbitrary_classes_palette(n_classes):
+    # Chose the colormap as tab10 for <= 10 classes or tab20
+    colormap = mpl.colormaps["tab10"] if n_classes <= 10 else mpl.colormaps["tab20"]
+    colors = colormap.colors
+
+    # The number of classes may be more than the number of elements in the colormap.
+    # If so, just repeat the colormap
+    n_repeats = int(ceil(n_classes / len(colors)))
+    # Repeat colormap
+    palette = colors * n_repeats
+    # Trunkcate to the number of classes
+    palette = palette[:n_classes]
+    return palette
 
 def ade_palette():
     """ADE20K palette for external use."""
@@ -441,6 +462,7 @@ def bdd100k_palette():
 
 dataset_aliases = {
     'cityscapes': ['cityscapes'],
+    'cityscapes_arbitrary_classes': ['cityscapes_arbitrary_classes'],
     'ade': ['ade', 'ade20k'],
     'voc': ['voc', 'pascal_voc', 'voc12', 'voc12aug'],
     'loveda': ['loveda'],
