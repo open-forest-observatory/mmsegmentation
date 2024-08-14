@@ -266,6 +266,8 @@ def cityscapes_arbitrary_classes_palette(n_classes):
     # Chose the colormap as tab10 for <= 10 classes or tab20
     colormap = mpl.colormaps["tab10"] if n_classes <= 10 else mpl.colormaps["tab20"]
     colors = colormap.colors
+    # Cast to a 0-255 int
+    colors = [[int(e * 255) for e in c] for c in colors]
 
     # The number of classes may be more than the number of elements in the colormap.
     # If so, just repeat the colormap
