@@ -3,6 +3,7 @@ from pathlib import Path
 from imageio import imwrite, imread
 import numpy as np
 import argparse
+import imagesize
 
 
 def parse_args():
@@ -35,12 +36,15 @@ def save_result(result, output_file, store_probs):
 def get_image_shape(file):
     """Return the (h, w) tuple of image shape if it's a image, otherwise None"""
     try:
-        image = imread(file)
-        return image.shape[:2]
+        shape = imagesize.get(file)
+        if shape == (-1, -1):
+            return None
+        return shape
     except:
         return None
 
 if __name__ == "__main__":
+
     args = parse_args()
 
     # Get all files
