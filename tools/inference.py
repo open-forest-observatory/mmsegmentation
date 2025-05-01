@@ -1,6 +1,7 @@
 from mmseg.apis import init_model, inference_model
 from pathlib import Path
 from imageio import imwrite, imread
+from PIL import Image
 import numpy as np
 import argparse
 
@@ -19,7 +20,12 @@ def parse_args():
     return args
 
 
-def save_result(result, output_file, store_probs):
+def save_result(result, output_file, store_probs, orientation):
+    # Flip the image if it was originally upsidedown
+    if orientation == 3:
+        print(f"Flipping {output_file}")
+        result = np.flip(result, (0, 1))
+
     # Create the the folder for the file
     Path(output_file.parent).mkdir(exist_ok=True, parents=True)
     if store_probs:
@@ -32,11 +38,13 @@ def save_result(result, output_file, store_probs):
         output_file = output_file.with_suffix(".png")
         imwrite(output_file, seg)
 
-def get_image_shape(file):
+def get_iamge_shape_orientation(file):
     """Return the (h, w) tuple of image shape if it's a image, otherwise None"""
     try:
-        image = imread(file)
-        return image.shape[:2]
+        image = Image.open(file)
+        size = image.size
+        orientation = image.getexif()[274]
+        return (size, orientation)
     except:
         return None
 
@@ -45,18 +53,16 @@ if __name__ == "__main__":
 
     # Get all files
     all_files = list(args.image_folder.rglob("*" + args.extension))
-    # Get the shape of all images. Will be None if not an image
-    image_shapes = []
-    for file in all_files:
-        image_shapes.append(get_image_shape(file))
+    # Get the shapes and orientation of all images. Will be None if not an image
+    image_shapes_and_orientation = [get_iamge_shape_orientation(file) for file in all_files]
     # Merge the shapes with the paths
-    shape_file_list = zip(image_shapes, all_files)
+    shape_orientation_file_list = zip(image_shapes_and_orientation, all_files)
     # Filter out the tuples that don't correspond to an image
-    shape_file_list = list(filter(lambda x: x[0] is not None, shape_file_list))
-    unique_shapes = np.unique([shape_file[0] for shape_file in shape_file_list], axis=0)
+    shape_orientation_file_list = list(filter(lambda x: x[0] is not None, shape_orientation_file_list))
+    # Get the unique shapes across all images
+    unique_shapes = np.unique([shape_file[0][0] for shape_file in shape_orientation_file_list], axis=0)
     # Convert back into tuples
     unique_shapes = [tuple(unique_shape) for unique_shape in unique_shapes]
-
     model = init_model(str(args.config_path), str(args.checkpoint_path))
 
     print(f"Unique image shapes are {unique_shapes}")
@@ -64,18 +70,22 @@ if __name__ == "__main__":
     for unique_shape in unique_shapes:
         print(f"Processing images with {unique_shape} shape")
         # Extract the filenames corresponding to images of that shape
-        matching_files = [x[1] for x in filter(lambda x: x[0] == unique_shape, shape_file_list)]
+        matching = list(filter(lambda x: x[0][0] == unique_shape, shape_orientation_file_list))
 
-        n_files = len(matching_files)
-        for i in range(0, len(matching_files), args.batch_size):
+        n_files = len(matching)
+        for i in range(0, len(matching), args.batch_size):
             print(f"index: {i}/{n_files}", end="\r")
-            batch_files = matching_files[i : i + args.batch_size]
+            batching = matching[i : i + args.batch_size]
 
-            results = inference_model(model, [str(x) for x in batch_files])
+            # Get the file names
+            files = [x[1] for x in batching]
+            orientations = [x[0][1] for x in batching]
 
-            rel_paths = [x.relative_to(args.image_folder) for x in batch_files]
+            results = inference_model(model, [str(x) for x in files])
+
+            rel_paths = [x.relative_to(args.image_folder) for x in files]
             output_files = [Path(args.output_folder, rel_path) for rel_path in rel_paths]
-            for result, output_file in zip(results, output_files):
+            for result, output_file, orientation in zip(results, output_files, orientations):
                 save_result(
-                    result=result, output_file=output_file, store_probs=args.store_probs
+                    result=result, output_file=output_file, store_probs=args.store_probs, orientation=orientation
                 )
