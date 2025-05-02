@@ -1,9 +1,10 @@
 from mmseg.apis import init_model, inference_model
 from pathlib import Path
-from imageio import imwrite, imread
+from imageio import imwrite
 from PIL import Image
 import numpy as np
 import argparse
+import glob
 
 
 def parse_args():
@@ -38,7 +39,7 @@ def save_result(result, output_file, store_probs, orientation):
         output_file = output_file.with_suffix(".png")
         imwrite(output_file, seg)
 
-def get_iamge_shape_orientation(file):
+def get_image_shape_orientation(file):
     """Return the (h, w) tuple of image shape if it's a image, otherwise None"""
     try:
         image = Image.open(file)
@@ -52,9 +53,12 @@ if __name__ == "__main__":
     args = parse_args()
 
     # Get all files
-    all_files = list(args.image_folder.rglob("*" + args.extension))
+    search_string = str(Path(args.image_folder, "**" + args.extension))
+    all_files = glob.glob(search_string, recursive=True)
+    all_files = list(filter( lambda x: Path(x).is_file(), all_files ))
     # Get the shapes and orientation of all images. Will be None if not an image
-    image_shapes_and_orientation = [get_iamge_shape_orientation(file) for file in all_files]
+    # This step may be slow
+    image_shapes_and_orientation = [get_image_shape_orientation(file) for file in all_files]
     # Merge the shapes with the paths
     shape_orientation_file_list = zip(image_shapes_and_orientation, all_files)
     # Filter out the tuples that don't correspond to an image
