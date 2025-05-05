@@ -22,20 +22,26 @@ def parse_args():
 
 
 def save_result(result, output_file, store_probs, orientation):
+    # Extract either the logits or highest confidence class
+    if store_probs:
+        seg = result.seg_logits.data.cpu().numpy()
+        seg = np.transpose(seg, (1, 2, 0))
+    else:
+        seg = result.pred_sem_seg.data.cpu().numpy()[0].astype(np.uint8)
+
     # Flip the image if it was originally upsidedown
     if orientation == 3:
         print(f"Flipping {output_file}")
-        result = np.flip(result, (0, 1))
+        seg = np.flip(seg, (0, 1))
 
     # Create the the folder for the file
     Path(output_file.parent).mkdir(exist_ok=True, parents=True)
+
+    # Write as a different file type based on whether it's two or three dimensional
     if store_probs:
         output_file = output_file.with_suffix(".npy")
-        seg_logits = result.seg_logits.data.cpu().numpy()
-        seg_logits = np.transpose(seg_logits, (1, 2, 0))
-        np.save(output_file, seg_logits)
+        np.save(output_file, seg)
     else:
-        seg = result.pred_sem_seg.data.cpu().numpy()[0].astype(np.uint8)
         output_file = output_file.with_suffix(".png")
         imwrite(output_file, seg)
 
@@ -87,7 +93,7 @@ if __name__ == "__main__":
 
             results = inference_model(model, [str(x) for x in files])
 
-            rel_paths = [x.relative_to(args.image_folder) for x in files]
+            rel_paths = [Path(x).relative_to(Path(args.image_folder)) for x in files]
             output_files = [Path(args.output_folder, rel_path) for rel_path in rel_paths]
             for result, output_file, orientation in zip(results, output_files, orientations):
                 save_result(
