@@ -51,7 +51,10 @@ def get_image_shape_orientation(file):
     try:
         image = Image.open(file)
         size = image.size
-        orientation = image.getexif()[274]
+        # Read the image exif
+        exif_dict = image.getexif()
+        # If the orientation flag is present, take that value. Otherwise use the default of 1.
+        orientation = exif_dict.get(274, 1)
         return (size, orientation)
     except:
         return None
