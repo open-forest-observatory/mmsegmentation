@@ -99,6 +99,21 @@ Please refer to [changelog.md](docs/en/notes/changelog.md) for details and relea
 
 Please refer to [get_started.md](docs/en/get_started.md#installation) for installation and [dataset_prepare.md](docs/en/user_guides/2_dataset_prepare.md#prepare-datasets) for dataset preparation.
 
+The steps I used to get a working version are the following
+```
+conda create -n mmsegmentation python=3.8
+conda activate mmsegmentation
+conda install pytorch=2.0.1 torchvision=0.15.2 pytorch-cuda=11.7 -c pytorch -c nvidia
+conda install mkl=2024.0
+pip install -U openmim
+mim install mmengine
+mim install "mmcv==2.0.0"
+cd /ofo-share/utils/mmsegmentation/
+pip install -v -e .
+pip install future tensorboard
+```
+
+
 ## Get Started
 
 Please see [Overview](docs/en/overview.md) for the general introduction of MMSegmentation.
