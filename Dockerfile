@@ -28,8 +28,10 @@ RUN ["/bin/bash", "-c", "mim install mmengine"]
 RUN ["/bin/bash", "-c", "mim install mmcv==${MMCV}"]
 
 # Install MMSegmentation
-RUN git clone -b main https://github.com/open-forest-observatory/mmsegmentation.git /mmsegmentation
+# Set the container workdir
 WORKDIR /mmsegmentation
+# Copy files from current directory into /mmsegmentation
+COPY . /mmsegmentation
 ENV FORCE_CUDA="1"
 RUN pip install -r requirements.txt
 RUN pip install --no-cache-dir -e .
